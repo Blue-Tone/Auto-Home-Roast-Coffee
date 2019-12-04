@@ -5,10 +5,28 @@
 #define OLED_RESET 4
 Adafruit_SSD1306 display(OLED_RESET);
 
-#define OUT_PIN 4
+// ロータリーエンコーダ
+#include <Encoder.h>
+Encoder lEnc(2, 4);
+Encoder rEnc(3, 5);
+
+// ピン定義
+#define OUT_PIN 12
 #define OUT_LED_PIN 13
 
+
+#define UP_TIME_INIT 250
+#define DOWN_TIME_INIT 250
+
+int upTime = UP_TIME_INIT;
+int downTime = DOWN_TIME_INIT;
+
+bool ledState = HIGH;
+unsigned long turnTime = 0;
+
 void setup() {
+  Serial.begin(9600);
+    
   // OLED
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3D (for the 128x64)
   display.clearDisplay();
@@ -19,16 +37,31 @@ void setup() {
 }
 
 void loop() {
-  int upTime = 500;
-  int downTime = 500;
+  long lEncVal = lEnc.read()+UP_TIME_INIT;
+  if (lEncVal != upTime) {
+    upTime = lEncVal;
+    Serial.println(upTime);
+  }
   
-  digitalWrite(OUT_PIN, HIGH);
-  digitalWrite(OUT_LED_PIN, HIGH);
-  delay(upTime);
-  digitalWrite(OUT_PIN, LOW);
-  digitalWrite(OUT_LED_PIN, LOW);
-  delay(downTime);
+  long rEncVal = rEnc.read()+DOWN_TIME_INIT;
+  if (rEncVal != downTime) {
+    downTime = rEncVal;
+    Serial.println(downTime);
+  }
 
+  // 時間になったらON/OFFを逆転させる
+  unsigned long nowTime = millis();
+  if(turnTime < nowTime){
+    if(ledState){
+      ledState = LOW;
+      turnTime = nowTime + downTime;
+    }else{
+      ledState = HIGH;
+      turnTime = nowTime + upTime;
+    }
+    digitalWrite(OUT_PIN, ledState);
+    digitalWrite(OUT_LED_PIN, ledState);
+  }
 
   // OLED
   display.clearDisplay();
